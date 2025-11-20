@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Importer - Acme Inc</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .tab:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .tab.active {
+            background: white;
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .section {
+            display: none;
+        }
+        
+        .section.active {
+            display: block;
+        }
+        
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 12px;
+            padding: 60px 40px;
+            text-align: center;
+            background: #f8f9ff;
+            margin-bottom: 30px;
+            transition: all 0.3s;
+        }
+        
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+        
+        .upload-area.dragover {
+            background: #e8ebff;
+            border-color: #764ba2;
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .upload-area h3 {
+            font-size: 20px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .upload-area p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102,126,234,0.4);
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .progress-container {
+            display: none;
+            margin-top: 30px;
+            padding: 30px;
+            background: #f8f9ff;
+            border-radius: 12px;
+        }
+        
+        .progress-container.active {
+            display: block;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e9ecef;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .progress-text {
+            text-align: center;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .search-box {
+            flex: 1;
+            min-width: 300px;
+            padding: 12px 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .filter-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .filter-label {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        
+        th {
+            background: #f8f9fa;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+            color: #555;
+        }
+        
+        tr:hover {
+            background: #f8f9ff;
+        }
+        
+        .badge {
+            padding: 5px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-secondary {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+        
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .btn-warning {
+            background: #ffc107;
+            color: #000;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 30px;
+            align-items: center;
+        }
+        
+        .page-info {
+            color: #666;
+            font-weight: 600;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 25px;
+            color: #333;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 30px;
+        }
+        
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .webhook-test-result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        
+        select.form-control {
+            cursor: pointer;
+        }
+        
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .checkbox-container input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Product Importer</h1>
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('upload')">Upload</button>
+                <button class="tab" onclick="switchTab('products')">Products</button>
+                <button class="tab" onclick="switchTab('webhooks')">Webhooks</button>
+            </div>
+        </div>
+        
+        <div class="content">
+            <!-- Upload Section -->
+            <div id="upload-section" class="section active">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📁</div>
+                    <h3>Upload CSV File</h3>
+                    <p>Drag and drop your CSV file here, or click to browse</p>
+                    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                        Choose File
+                    </button>
+                    <input type="file" id="fileInput" class="file-input" accept=".csv" onchange="handleFileSelect(event)">
+                </div>
+                
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill">0%</div>
+                    </div>
+                    <p class="progress-text" id="progressText">Initializing...</p>
+                </div>
+                
+                <div id="uploadAlert"></div>
+            </div>
+            
+            <!-- Products Section -->
+            <div id="products-section" class="section">
+                <div class="controls">
+                    <input type="text" class="search-box" id="searchBox" placeholder="Search by SKU, name, or description...">
+                    <div class="filter-group">
+                        <label class="filter-label">Status:</label>
+                        <select id="statusFilter" class="form-control" style="width: 150px;">
+                            <option value="">All</option>
+                            <option value="true">Active</option>
+                            <option value="false">Inactive</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="showProductModal()">+ Add Product</button>
+                    <button class="btn btn-danger" onclick="confirmBulkDelete()">🗑️ Delete All</button>
+                </div>
+                
+                <div id="productsAlert"></div>
+                
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>SKU</th>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Price</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productsTableBody">
+                            <tr>
+                                <td colspan="7" class="empty-state">
+                                    <div class="empty-state-icon">📦</div>
+                                    <p>Loading products...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="pagination" id="pagination"></div>
+            </div>
+            
+            <!-- Webhooks Section -->
+            <div id="webhooks-section" class="section">
+                <div class="controls">
+                    <h2 style="flex: 1;">Webhook Management</h2>
+                    <button class="btn btn-primary" onclick="showWebhookModal()">+ Add Webhook</button>
+                </div>
+                
+                <div id="webhooksAlert"></div>
+                
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>URL</th>
+                                <th>Event Type</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="webhooksTableBody">
+                            <tr>
+                                <td colspan="5" class="empty-state">
+                                    <div class="empty-state-icon">🔗</div>
+                                    <p>Loading webhooks...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Product Modal -->
+    <div id="productModal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-header" id="productModalTitle">Add Product</h2>
+            <form id="productForm" onsubmit="saveProduct(event)">
+                <input type="hidden" id="productId">
+                <div class="form-group">
+                    <label class="form-label">SKU *</label>
+                    <input type="text" class="form-control" id="productSku" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Name *</label>
+                    <input type="text" class="form-control" id="productName" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-control" id="productDescription" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Price</label>
+                    <input type="number" step="0.01" class="form-control" id="productPrice">
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-container">
+                        <input type="checkbox" id="productActive" checked>
+                        <label class="form-label" style="margin: 0;">Active</label>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeProductModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Webhook Modal -->
+    <div id="webhookModal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-header" id="webhookModalTitle">Add Webhook</h2>
+            <form id="webhookForm" onsubmit="saveWebhook(event)">
+                <input type="hidden" id="webhookId">
+                <div class="form-group">
+                    <label class="form-label">URL *</label>
+                    <input type="url" class="form-control" id="webhookUrl" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Event Type *</label>
+                    <select class="form-control" id="webhookEventType" required>
+                        <option value="">Select event...</option>
+                        <option value="product.created">Product Created</option>
+                        <option value="product.updated">Product Updated</option>
+                        <option value="product.deleted">Product Deleted</option>
+                        <option value="product.import.completed">Import Completed</option>
+                        <option value="product.bulk_deleted">Bulk Delete</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-container">
+                        <input type="checkbox" id="webhookEnabled" checked>
+                        <label class="form-label" style="margin: 0;">Enabled</label>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeWebhookModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        // State
+        let currentPage = 0;
+        let pageSize = 50;
+        let currentSearch = '';
+        let currentStatusFilter = '';
+        let uploadTaskId = null;
+        let uploadInterval = null;
+        
+        // Tab switching
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`${tab}-section`).classList.add('active');
+            
+            if (tab === 'products') {
+                loadProducts();
+            } else if (tab === 'webhooks') {
+                loadWebhooks();
+            }
+        }
+        
+        // File upload
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                uploadFile(files[0]);
+            }
+        });
+        
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                uploadFile(file);
+            }
+        }
+        
+        async function uploadFile(file) {
+            if (!file.name.endsWith('.csv')) {
+                showAlert('uploadAlert', 'Please select a CSV file', 'error');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch('/api/products/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    uploadTaskId = data.task_id;
+                    document.getElementById('progressContainer').classList.add('active');
+                    showAlert('uploadAlert', data.message, 'info');
+                    startProgressTracking();
+                } else {
+                    showAlert('uploadAlert', data.detail || 'Upload failed', 'error');
+                }
+            } catch (error) {
+                showAlert('uploadAlert', 'Error uploading file: ' + error.message, 'error');
+            }
+        }
+        
+        function startProgressTracking() {
+            if (uploadInterval) clearInterval(uploadInterval);
+            
+            uploadInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/api/tasks/${uploadTaskId}`);
+                    const data = await response.json();
+                    
+                    if (data.status === 'processing') {
+                        const progress = data.total > 0 ? Math.round((data.progress / data.total) * 100) : 0;
+                        document.getElementById('progressFill').style.width = progress + '%';
+                        document.getElementById('progressFill').textContent = progress + '%';
+                        document.getElementById('progressText').textContent = data.message;
+                    } else if (data.status === 'completed') {
+                        document.getElementById('progressFill').style.width = '100%';
+                        document.getElementById('progressFill').textContent = '100%';
+                        document.getElementById('progressText').textContent = data.message;
+                        clearInterval(uploadInterval);
+                        showAlert('uploadAlert', 'Import completed successfully!', 'success');
+                        fileInput.value = '';
+                    } else if (data.status === 'failed') {
+                        clearInterval(uploadInterval);
+                        showAlert('uploadAlert', 'Import failed: ' + data.message, 'error');
+                        document.getElementById('progressContainer').classList.remove('active');
+                        fileInput.value = '';
+                    }
+                } catch (error) {
+                    console.error('Error checking task status:', error);
+                }
+            }, 1000);
+        }
+        
+        // Products
+        async function loadProducts() {
+            try {
+                const params = new URLSearchParams({
+                    skip: currentPage * pageSize,
+                    limit: pageSize
+                });
+                
+                if (currentSearch) params.append('search', currentSearch);
+                if (currentStatusFilter) params.append('is_active', currentStatusFilter);
+                
+                const [productsResponse, countResponse] = await Promise.all([
+                    fetch(`/api/products?${params}`),
+                    fetch(`/api/products/count?${params}`)
+                ]);
+                
+                const products = await productsResponse.json();
+                const countData = await countResponse.json();
+                
+                renderProducts(products);
+                renderPagination(countData.count);
+            } catch (error) {
+                showAlert('productsAlert', 'Error loading products: ' + error.message, 'error');
+            }
+        }
+        
+        function renderProducts(products) {
+            const tbody = document.getElementById('productsTableBody');
+            
+            if (products.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <div class="empty-state-icon">📦</div>
+                            <p>No products found</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = products.map(p => `
+                <tr>
+                    <td>${p.id}</td>
+                    <td><strong>${p.sku}</strong></td>
+                    <td>${p.name}</td>
+                    <td>${p.description || '-'}</td>
+                    <td>${p.price ? '$' + p.price.toFixed(2) : '-'}</td>
+                    <td>
+                        <span class="badge ${p.is_active ? 'badge-success' : 'badge-secondary'}">
+                            ${p.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-info btn-sm" onclick="editProduct(${p.id})">Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.id})">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        function renderPagination(total) {
+            const totalPages = Math.ceil(total / pageSize);
+            const pagination = document.getElementById('pagination');
+            
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+            
+            pagination.innerHTML = `
+                <button class="btn btn-secondary btn-sm" ${currentPage === 0 ? 'disabled' : ''} 
+                    onclick="changePage(${currentPage - 1})">Previous</button>
+                <span class="page-info">Page ${currentPage + 1} of ${totalPages}</span>
+                <button class="btn btn-secondary btn-sm" ${currentPage >= totalPages - 1 ? 'disabled' : ''} 
+                    onclick="changePage(${currentPage + 1})">Next</button>
+            `;
+        }
+        
+        function changePage(page) {
+            currentPage = page;
+            loadProducts();
+        }
+        
+        document.getElementById('searchBox').addEventListener('input', (e) => {
+            currentSearch = e.target.value;
+            currentPage = 0;
+            loadProducts();
+        });
+        
+        document.getElementById('statusFilter').addEventListener('change', (e) => {
+            currentStatusFilter = e.target.value;
+            currentPage = 0;
+            loadProducts();
+        });
+        
+        function showProductModal(productId = null) {
+            document.getElementById('productModal').classList.add('active');
+            document.getElementById('productForm').reset();
+            document.getElementById('productId').value = '';
+            document.getElementById('productModalTitle').textContent = 'Add Product';
+            document.getElementById('productActive').checked = true;
+            
+            if (productId) {
+                loadProductForEdit(productId);
+            }
+        }
+        
+        async function loadProductForEdit(productId) {
+            try {
+                const response = await fetch(`/api/products/${productId}`);
+                const product = await response.json();
+                
+                document.getElementById('productId').value = product.id;
+                document.getElementById('productSku').value = product.sku;
+                document.getElementById('productName').value = product.name;
+                document.getElementById('productDescription').value = product.description || '';
+                document.getElementById('productPrice').value = product.price || '';
+                document.getElementById('productActive').checked = product.is_active;
+                document.getElementById('productModalTitle').textContent = 'Edit Product';
+            } catch (error) {
+                showAlert('productsAlert', 'Error loading product: ' + error.message, 'error');
+            }
+        }
+        
+        function closeProductModal() {
+            document.getElementById('productModal').classList.remove('active');
+        }
+        
+        async function saveProduct(event) {
+            event.preventDefault();
+            
+            const productId = document.getElementById('productId').value;
+            const productData = {
+                sku: document.getElementById('productSku').value,
+                name: document.getElementById('productName').value,
+                description: document.getElementById('productDescription').value || null,
+                price: parseFloat(document.getElementById('productPrice').value) || null,
+                is_active: document.getElementById('productActive').checked
+            };
+            
+            try {
+                const url = productId ? `/api/products/${productId}` : '/api/products';
+                const method = productId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(productData)
+                });
+                
+                if (response.ok) {
+                    closeProductModal();
+                    loadProducts();
+                    showAlert('productsAlert', `Product ${productId ? 'updated' : 'created'} successfully`, 'success');
+                } else {
+                    const error = await response.json();
+                    showAlert('productsAlert', error.detail || 'Error saving product', 'error');
+                }
+            } catch (error) {
+                showAlert('productsAlert', 'Error saving product: ' + error.message, 'error');
+            }
+        }
+        
+        function editProduct(productId) {
+            showProductModal(productId);
+        }
+        
+        async function deleteProduct(productId) {
+            if (!confirm('Are you sure you want to delete this product?')) return;
+            
+            try {
+                const response = await fetch(`/api/products/${productId}`, {method: 'DELETE'});
+                
+                if (response.ok) {
+                    loadProducts();
+                    showAlert('productsAlert', 'Product deleted successfully', 'success');
+                } else {
+                    const error = await response.json();
+                    showAlert('productsAlert', error.detail || 'Error deleting product', 'error');
+                }
+            } catch (error) {
+                showAlert('productsAlert', 'Error deleting product: ' + error.message, 'error');
+            }
+        }
+        
+        async function confirmBulkDelete() {
+            if (!confirm('⚠️ WARNING: This will delete ALL products. This action cannot be undone. Are you absolutely sure?')) return;
+            
+            try {
+                const response = await fetch('/api/products', {method: 'DELETE'});
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    loadProducts();
+                    showAlert('productsAlert', data.message, 'success');
+                } else {
+                    const error = await response.json();
+                    showAlert('productsAlert', error.detail || 'Error deleting products', 'error');
+                }
+            } catch (error) {
+                showAlert('productsAlert', 'Error deleting products: ' + error.message, 'error');
+            }
+        }
+        
+        // Webhooks
+        async function loadWebhooks() {
+            try {
+                const response = await fetch('/api/webhooks');
+                const webhooks = await response.json();
+                renderWebhooks(webhooks);
+            } catch (error) {
+                showAlert('webhooksAlert', 'Error loading webhooks: ' + error.message, 'error');
+            }
+        }
+        
+        function renderWebhooks(webhooks) {
+            const tbody = document.getElementById('webhooksTableBody');
+            
+            if (webhooks.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            <div class="empty-state-icon">🔗</div>
+                            <p>No webhooks configured</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = webhooks.map(w => `
+                <tr>
+                    <td>${w.id}</td>
+                    <td style="word-break: break-all;">${w.url}</td>
+                    <td><span class="badge badge-secondary">${w.event_type}</span></td>
+                    <td>
+                        <span class="badge ${w.is_enabled ? 'badge-success' : 'badge-secondary'}">
+                            ${w.is_enabled ? 'Enabled' : 'Disabled'}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-info btn-sm" onclick="testWebhook(${w.id})">Test</button>
+                            <button class="btn btn-warning btn-sm" onclick="editWebhook(${w.id})">Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteWebhook(${w.id})">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        function showWebhookModal(webhookId = null) {
+            document.getElementById('webhookModal').classList.add('active');
+            document.getElementById('webhookForm').reset();
+            document.getElementById('webhookId').value = '';
+            document.getElementById('webhookModalTitle').textContent = 'Add Webhook';
+            document.getElementById('webhookEnabled').checked = true;
+            
+            if (webhookId) {
+                loadWebhookForEdit(webhookId);
+            }
+        }
+        
+        async function loadWebhookForEdit(webhookId) {
+            try {
+                const response = await fetch('/api/webhooks');
+                const webhooks = await response.json();
+                const webhook = webhooks.find(w => w.id === webhookId);
+                
+                if (webhook) {
+                    document.getElementById('webhookId').value = webhook.id;
+                    document.getElementById('webhookUrl').value = webhook.url;
+                    document.getElementById('webhookEventType').value = webhook.event_type;
+                    document.getElementById('webhookEnabled').checked = webhook.is_enabled;
+                    document.getElementById('webhookModalTitle').textContent = 'Edit Webhook';
+                }
+            } catch (error) {
+                showAlert('webhooksAlert', 'Error loading webhook: ' + error.message, 'error');
+            }
+        }
+        
+        function closeWebhookModal() {
+            document.getElementById('webhookModal').classList.remove('active');
+        }
+        
+        async function saveWebhook(event) {
+            event.preventDefault();
+            
+            const webhookId = document.getElementById('webhookId').value;
+            const webhookData = {
+                url: document.getElementById('webhookUrl').value,
+                event_type: document.getElementById('webhookEventType').value,
+                is_enabled: document.getElementById('webhookEnabled').checked
+            };
+            
+            try {
+                const url = webhookId ? `/api/webhooks/${webhookId}` : '/api/webhooks';
+                const method = webhookId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(webhookData)
+                });
+                
+                if (response.ok) {
+                    closeWebhookModal();
+                    loadWebhooks();
+                    showAlert('webhooksAlert', `Webhook ${webhookId ? 'updated' : 'created'} successfully`, 'success');
+                } else {
+                    const error = await response.json();
+                    showAlert('webhooksAlert', error.detail || 'Error saving webhook', 'error');
+                }
+            } catch (error) {
+                showAlert('webhooksAlert', 'Error saving webhook: ' + error.message, 'error');
+            }
+        }
+        
+        function editWebhook(webhookId) {
+            showWebhookModal(webhookId);
+        }
+        
+        async function deleteWebhook(webhookId) {
+            if (!confirm('Are you sure you want to delete this webhook?')) return;
+            
+            try {
+                const response = await fetch(`/api/webhooks/${webhookId}`, {method: 'DELETE'});
+                
+                if (response.ok) {
+                    loadWebhooks();
+                    showAlert('webhooksAlert', 'Webhook deleted successfully', 'success');
+                } else {
+                    const error = await response.json();
+                    showAlert('webhooksAlert', error.detail || 'Error deleting webhook', 'error');
+                }
+            } catch (error) {
+                showAlert('webhooksAlert', 'Error deleting webhook: ' + error.message, 'error');
+            }
+        }
+        
+        async function testWebhook(webhookId) {
+            try {
+                showAlert('webhooksAlert', 'Testing webhook...', 'info');
+                const response = await fetch(`/api/webhooks/${webhookId}/test`, {method: 'POST'});
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('webhooksAlert', 
+                        `✅ Webhook test successful! Status: ${result.status_code}, Response time: ${result.response_time_ms}ms`, 
+                        'success');
+                } else {
+                    showAlert('webhooksAlert', `❌ Webhook test failed: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                showAlert('webhooksAlert', 'Error testing webhook: ' + error.message, 'error');
+            }
+        }
+        
+        // Utility
+        function showAlert(elementId, message, type) {
+            const alertDiv = document.getElementById(elementId);
+            const alertClass = type === 'success' ? 'alert-success' : 
+                               type === 'error' ? 'alert-error' : 'alert-info';
+            
+            alertDiv.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
+            
+            setTimeout(() => {
+                alertDiv.innerHTML = '';
+            }, 5000);
+        }
+        
+        // Close modals on outside click
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('active');
+            }
+        }
+    </script>
+</body>
+</html>
