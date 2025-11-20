@@ -20,7 +20,7 @@ app = FastAPI(title="Product Importer API")
 # HTML Frontend
 @app.get("/", response_class=HTMLResponse)
 async def root():
-    with open("app/static/index.html", "r") as f:
+    with open("app/static/index.html", "r", encoding="utf-8") as f:
         return f.read()
 
 # ============= PRODUCT ENDPOINTS =============
