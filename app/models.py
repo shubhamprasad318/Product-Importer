@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, Index
+from sqlalchemy import Column, Integer, String, Text, Boolean
 from app.database import Base
 
 class Product(Base):

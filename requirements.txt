@@ -2,8 +2,6 @@ fastapi
 uvicorn[standard]
 sqlalchemy
 psycopg2-binary
-celery
-redis
 python-multipart
 pandas
 pydantic

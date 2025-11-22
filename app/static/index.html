@@ -176,7 +176,7 @@
 
             try {
                 document.getElementById('progressBar').style.display = 'block';
-                showStatus('uploadStatus', 'Uploading file...', 'info');
+                showStatus('uploadStatus', 'Uploading and processing file...', 'info');
 
                 const response = await fetch('/api/upload', {
                     method: 'POST',
@@ -186,42 +186,20 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    trackProgress(data.task_id);
+                    const progress = data.progress || 0;
+                    const total = data.total || 100;
+                    const percentage = total > 0 ? Math.round((progress / total) * 100) : 100;
+                    
+                    document.getElementById('progressFill').style.width = percentage + '%';
+                    document.getElementById('progressFill').textContent = percentage + '%';
+                    showStatus('uploadStatus', data.message || 'Upload complete', 'success');
+                    loadProducts();
                 } else {
                     showStatus('uploadStatus', data.detail || 'Upload failed', 'error');
                 }
             } catch (error) {
                 showStatus('uploadStatus', 'Upload error: ' + error.message, 'error');
             }
-        }
-
-        async function trackProgress(taskId) {
-            const interval = setInterval(async () => {
-                try {
-                    const response = await fetch(`/api/upload/status/${taskId}`);
-                    const data = await response.json();
-
-                    const progress = data.progress || 0;
-                    const total = data.total || 100;
-                    const percentage = total > 0 ? Math.round((progress / total) * 100) : 0;
-
-                    document.getElementById('progressFill').style.width = percentage + '%';
-                    document.getElementById('progressFill').textContent = percentage + '%';
-                    showStatus('uploadStatus', data.message || 'Processing...', 'info');
-
-                    if (data.status === 'Complete') {
-                        clearInterval(interval);
-                        showStatus('uploadStatus', data.message, 'success');
-                        loadProducts();
-                    } else if (data.status === 'Failed') {
-                        clearInterval(interval);
-                        showStatus('uploadStatus', data.message, 'error');
-                    }
-                } catch (error) {
-                    clearInterval(interval);
-                    showStatus('uploadStatus', 'Error tracking progress', 'error');
-                }
-            }, 1000);
         }
 
         // Product Functions
