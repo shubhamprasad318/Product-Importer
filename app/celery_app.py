@@ -1,12 +1,16 @@
 from celery import Celery
-from app.config import get_settings
+from dotenv import load_dotenv
+import os
 
-settings = get_settings()
+# Load environment variables from .env file
+load_dotenv()
+
+REDIS_URL = os.getenv("REDIS_URL")
 
 celery_app = Celery(
     "product_importer",
-    broker=settings.celery_broker_url,
-    backend=settings.celery_result_backend
+    broker=REDIS_URL,
+    backend=REDIS_URL
 )
 
 celery_app.conf.update(
@@ -17,5 +21,4 @@ celery_app.conf.update(
     enable_utc=True,
     task_track_started=True,
     task_time_limit=3600,
-    worker_prefetch_multiplier=1,
 )

@@ -1,6 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, Float, Index
-from sqlalchemy.sql import func
-from sqlalchemy import DateTime
+from sqlalchemy import Column, Integer, String, Text, Boolean, Index
 from app.database import Base
 
 class Product(Base):
@@ -9,22 +7,31 @@ class Product(Base):
     id = Column(Integer, primary_key=True, index=True)
     sku = Column(String(255), unique=True, nullable=False, index=True)
     name = Column(String(500), nullable=False)
-    description = Column(Text, nullable=True)
-    price = Column(Float, nullable=True)
-    is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    description = Column(Text)
+    is_active = Column(Boolean, default=True)  # Changed from 'active' to 'is_active'
     
-    __table_args__ = (
-        Index('ix_products_sku_lower', func.lower(sku), unique=True),
-    )
+    # Add property for compatibility
+    @property
+    def active(self):
+        return self.is_active
+    
+    @active.setter
+    def active(self, value):
+        self.is_active = value
 
 class Webhook(Base):
     __tablename__ = "webhooks"
     
     id = Column(Integer, primary_key=True, index=True)
-    url = Column(String(1000), nullable=False)
+    url = Column(String(500), nullable=False)
     event_type = Column(String(100), nullable=False)
-    is_enabled = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    is_enabled = Column(Boolean, default=True)  # Changed from 'enabled' to 'is_enabled'
+    
+    # Add property for compatibility
+    @property
+    def enabled(self):
+        return self.is_enabled
+    
+    @enabled.setter
+    def enabled(self, value):
+        self.is_enabled = value

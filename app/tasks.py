@@ -1,130 +1,121 @@
-import pandas as pd
+import csv
 import io
-from sqlalchemy import func
-from sqlalchemy.dialects.postgresql import insert
+from dotenv import load_dotenv
+import os
+
+# Load environment variables
+load_dotenv()
+
 from app.celery_app import celery_app
 from app.database import SessionLocal
 from app.models import Product, Webhook
+from sqlalchemy import func
 import httpx
-import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 @celery_app.task(bind=True)
-def import_products_task(self, csv_content: str):
-    """
-    Import products from CSV content with progress tracking.
-    Handles large files efficiently with batch processing.
-    """
+def process_csv_upload(self, csv_content: str):
+    """Process CSV file upload with progress tracking"""
     db = SessionLocal()
-    
     try:
-        # Update task state
-        self.update_state(state='PROGRESS', meta={'progress': 0, 'total': 0, 'message': 'Parsing CSV'})
-        
-        # Parse CSV
         csv_file = io.StringIO(csv_content)
-        df = pd.read_csv(csv_file)
+        reader = csv.DictReader(csv_file)
         
-        total_rows = len(df)
-        self.update_state(state='PROGRESS', meta={'progress': 0, 'total': total_rows, 'message': 'Validating data'})
-        
-        # Clean and prepare data
-        df.columns = df.columns.str.strip().str.lower()
-        
-        # Ensure required columns exist
-        required_cols = ['sku', 'name']
-        for col in required_cols:
-            if col not in df.columns:
-                raise ValueError(f"Missing required column: {col}")
-        
-        # Process in batches for better performance
-        batch_size = 1000
+        total_rows = csv_content.count('\n') - 1
         processed = 0
+        batch_size = 1000
+        batch = []
         
-        for start_idx in range(0, total_rows, batch_size):
-            end_idx = min(start_idx + batch_size, total_rows)
-            batch_df = df.iloc[start_idx:end_idx]
+        for row in reader:
+            sku = row.get('sku', '').strip()
+            name = row.get('name', '').strip()
+            description = row.get('description', '').strip()
             
-            # Prepare batch data
-            products_data = []
-            for _, row in batch_df.iterrows():
-                product_dict = {
-                    'sku': str(row['sku']).strip(),
-                    'name': str(row['name']).strip(),
-                    'description': str(row.get('description', '')) if pd.notna(row.get('description')) else None,
-                    'price': float(row['price']) if 'price' in row and pd.notna(row['price']) else None,
-                    'is_active': True
-                }
-                products_data.append(product_dict)
+            if not sku or not name:
+                continue
             
-            # Bulk upsert using PostgreSQL's INSERT ... ON CONFLICT
-            stmt = insert(Product).values(products_data)
-            stmt = stmt.on_conflict_do_update(
-                index_elements=['sku'],
-                set_={
-                    'name': stmt.excluded.name,
-                    'description': stmt.excluded.description,
-                    'price': stmt.excluded.price,
-                    'is_active': stmt.excluded.is_active
-                }
-            )
+            batch.append({
+                'sku': sku,
+                'name': name,
+                'description': description,
+                'active': True
+            })
             
-            db.execute(stmt)
-            db.commit()
+            processed += 1
             
-            processed += len(batch_df)
-            progress = int((processed / total_rows) * 100)
-            
-            self.update_state(
-                state='PROGRESS',
-                meta={
-                    'progress': processed,
-                    'total': total_rows,
-                    'message': f'Imported {processed}/{total_rows} products'
-                }
-            )
+            if len(batch) >= batch_size:
+                upsert_products(db, batch)
+                batch = []
+                
+                # Update progress
+                progress = int((processed / total_rows) * 100)
+                self.update_state(
+                    state='PROGRESS',
+                    meta={
+                        'status': 'Processing',
+                        'progress': processed,
+                        'total': total_rows,
+                        'message': f'Processed {processed} of {total_rows} products'
+                    }
+                )
+        
+        # Process remaining batch
+        if batch:
+            upsert_products(db, batch)
         
         # Trigger webhooks
-        trigger_webhooks.delay('product.import.completed', {'total': total_rows})
+        trigger_webhooks(db, 'product.imported', {'count': processed})
         
         return {
-            'status': 'completed',
+            'status': 'Complete',
             'progress': total_rows,
             'total': total_rows,
-            'message': f'Successfully imported {total_rows} products'
+            'message': f'Successfully imported {processed} products'
         }
-        
+    
     except Exception as e:
-        db.rollback()
-        self.update_state(state='FAILURE', meta={'message': str(e)})
-        raise
+        logger.error(f"Error processing CSV: {str(e)}")
+        return {
+            'status': 'Failed',
+            'progress': 0,
+            'total': 0,
+            'message': f'Error: {str(e)}'
+        }
     finally:
         db.close()
 
-@celery_app.task
-def trigger_webhooks(event_type: str, payload: dict):
-    """
-    Trigger all enabled webhooks for a given event type.
-    """
-    db = SessionLocal()
-    
-    try:
-        webhooks = db.query(Webhook).filter(
-            Webhook.event_type == event_type,
-            Webhook.is_enabled == True
-        ).all()
+def upsert_products(db, products):
+    """Bulk upsert products with case-insensitive SKU matching"""
+    for product_data in products:
+        # Check for existing product (case-insensitive)
+        existing = db.query(Product).filter(
+            func.lower(Product.sku) == func.lower(product_data['sku'])
+        ).first()
         
-        for webhook in webhooks:
-            try:
-                with httpx.Client(timeout=10.0) as client:
-                    response = client.post(
-                        webhook.url,
-                        json={'event': event_type, 'data': payload},
-                        headers={'Content-Type': 'application/json'}
-                    )
-                    response.raise_for_status()
-            except Exception as e:
-                # Log error but continue with other webhooks
-                print(f"Webhook error for {webhook.url}: {str(e)}")
-                
-    finally:
-        db.close()
+        if existing:
+            # Update existing
+            existing.name = product_data['name']
+            existing.description = product_data['description']
+            existing.active = product_data.get('active', True)
+        else:
+            # Create new
+            new_product = Product(**product_data)
+            db.add(new_product)
+    
+    db.commit()
+
+def trigger_webhooks(db, event_type: str, data: dict):
+    """Trigger all enabled webhooks for the event type"""
+    webhooks = db.query(Webhook).filter(
+        Webhook.event_type == event_type,
+        Webhook.enabled == True
+    ).all()
+    
+    for webhook in webhooks:
+        try:
+            with httpx.Client(timeout=10.0) as client:
+                client.post(webhook.url, json={'event': event_type, 'data': data})
+        except Exception as e:
+            logger.error(f"Webhook error for {webhook.url}: {str(e)}")
