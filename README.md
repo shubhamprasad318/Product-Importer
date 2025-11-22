@@ -36,5 +36,5 @@ Visit the live application: **[https://product-importer-54b2.onrender.com](https
 - Render (Web hosting)
 - Render PostgreSQL (Database hosting)
 
-## 📁 Project Structure
+
 
