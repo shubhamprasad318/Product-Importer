@@ -161,11 +161,17 @@ async def delete_product(
     return {"message": "Product deleted"}
 
 @app.delete("/api/products/bulk-delete")
-async def bulk_delete_products(db: Session = Depends(get_db)):
+async def bulk_delete_products(
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
     """Delete all products"""
     count = db.query(Product).count()
     db.query(Product).delete()
     db.commit()
+    
+    # Trigger webhooks in background
+    background_tasks.add_task(trigger_webhooks, 'product.bulk_deleted', {'count': count})
     
     return {"message": f"Deleted {count} products"}
 
