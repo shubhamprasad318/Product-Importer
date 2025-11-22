@@ -32,7 +32,7 @@ async def read_root():
     with open("app/static/index.html", "r", encoding="utf-8") as f:
         return f.read()
 
-# API Endpoints - [Keep all the same endpoints from previous code]
+# API Endpoints
 
 @app.post("/api/upload")
 async def upload_csv(file: UploadFile = File(...)):
@@ -65,7 +65,7 @@ async def get_products(
     if name:
         query = query.filter(Product.name.ilike(f'%{name}%'))
     if active is not None:
-        query = query.filter(Product.active == active)
+        query = query.filter(Product.is_active == active)
     
     total = query.count()
     products = query.offset((page - 1) * limit).limit(limit).all()
@@ -76,6 +76,24 @@ async def get_products(
         "page": page,
         "limit": limit
     }
+
+# IMPORTANT: bulk-delete MUST come BEFORE {product_id} routes
+@app.delete("/api/products/bulk-delete")
+async def bulk_delete_products(db: Session = Depends(get_db)):
+    """Delete all products"""
+    count = db.query(Product).count()
+    db.query(Product).delete(synchronize_session=False)
+    db.commit()
+    
+    return {"message": f"Deleted {count} products"}
+
+@app.get("/api/products/{product_id}", response_model=ProductSchema)
+async def get_product(product_id: int, db: Session = Depends(get_db)):
+    """Get single product"""
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return product
 
 @app.post("/api/products", response_model=ProductSchema)
 async def create_product(
@@ -152,28 +170,7 @@ async def delete_product(
     
     return {"message": "Product deleted"}
 
-@app.delete("/api/products/bulk-delete")
-async def bulk_delete_products(
-    background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db)
-):
-    """Delete all products"""
-    count = db.query(Product).count()
-    db.query(Product).delete()
-    db.commit()
-    
-    # Trigger webhooks in background
-    background_tasks.add_task(trigger_webhooks, 'product.bulk_deleted', {'count': count})
-    
-    return {"message": f"Deleted {count} products"}
-
-@app.get("/api/products/{product_id}", response_model=ProductSchema)
-async def get_product(product_id: int, db: Session = Depends(get_db)):
-    """Get single product"""
-    product = db.query(Product).filter(Product.id == product_id).first()
-    if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
-    return product
+# Webhook Endpoints
 
 @app.get("/api/webhooks", response_model=List[WebhookSchema])
 async def get_webhooks(db: Session = Depends(get_db)):
