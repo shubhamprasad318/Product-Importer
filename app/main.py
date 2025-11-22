@@ -77,14 +77,6 @@ async def get_products(
         "limit": limit
     }
 
-@app.get("/api/products/{product_id}", response_model=ProductSchema)
-async def get_product(product_id: int, db: Session = Depends(get_db)):
-    """Get single product"""
-    product = db.query(Product).filter(Product.id == product_id).first()
-    if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
-    return product
-
 @app.post("/api/products", response_model=ProductSchema)
 async def create_product(
     product: ProductCreate, 
@@ -174,6 +166,14 @@ async def bulk_delete_products(
     background_tasks.add_task(trigger_webhooks, 'product.bulk_deleted', {'count': count})
     
     return {"message": f"Deleted {count} products"}
+
+@app.get("/api/products/{product_id}", response_model=ProductSchema)
+async def get_product(product_id: int, db: Session = Depends(get_db)):
+    """Get single product"""
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return product
 
 @app.get("/api/webhooks", response_model=List[WebhookSchema])
 async def get_webhooks(db: Session = Depends(get_db)):
